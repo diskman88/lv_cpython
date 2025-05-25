@@ -1026,10 +1026,12 @@ def __{func_name}_callback_func({params}):
                         ptr = False
 
                     name = s_type._declname  # NOQA
+                    print(f'fname: {name}')
 
                     for item in ('_cb_t', '_f_t'):
 
                         if item in name:
+                            print(f'item: {item}')
                             if name.replace('lv_', '', 1) in py_callback_names:
                                 return
 
@@ -1151,9 +1153,10 @@ def __{func_name}_callback_func({params}):
 
                                 param_types.append(param_type)
                                 param_names.append(param_name)
-                                params.append(
-                                    param_name + ': ' + str(param_type)
-                                )
+                                if(param_name and param_type):
+                                    params.append(
+                                        param_name + ': ' + str(param_type)
+                                    )
 
                             if param_types:
                                 param_types = '[' + (', '.join(
@@ -1182,10 +1185,14 @@ def __{func_name}_callback_func({params}):
                                 struct_userdata = self.arg_user_data_template
 
                             if param_names:
+                                print(f'param_names: {param_names}')
                                 if 'user_data' in param_names:
                                     user_data = 'user_data'
                                 else:
-                                    user_data = param_names[0] + '.user_data'
+                                    if(param_names[0]):
+                                        user_data = param_names[0] + '.user_data'
+                                    else:
+                                        user_data = None
 
                                 if len(', '.join(param_names)) > 45:
                                     param_names = (
@@ -1578,6 +1585,8 @@ py_type_names = []
 class GlobalsWrapper(dict):
 
     def __init__(self):
+        # `globals()` 是一个内置函数，用于返回当前全局符号表的字典。这个符号表包含了所有全局变量和它们的值，
+        # 包括函数、类、导入的模块等。调用 `globals()` 可以帮助开发者查看或操作程序中的全局命名空间。
         self.globs = globals()
         dict.__init__(self)
 
@@ -1607,9 +1616,17 @@ def patch_pycparser():
         result += ')'
 
         return result
-
+    
+    # 这段代码的作用是从 `sys.modules` 中获取名为 `pycparser.c_ast` 的模块，并将其赋值给变量 `ast`。
+    # 具体来说，`sys.modules` 是一个字典，包含了已导入模块的缓存，通过键名（这里是 `'pycparser.c_ast'`）
+    # 可以直接访问对应的模块对象。这种方式通常用于动态操作模块或避免重复导入。
     ast = sys.modules['pycparser.c_ast']
-
+    # 这段代码的功能是为 `ast.Node` 类动态添加一个 `__repr__` 方法，将其设置为 `cls_repr`。具体来说：
+    # - `setattr` 是 Python 的内置函数，用于为对象设置属性值。
+    # - 这里的第一个参数 `ast.Node` 是一个类（假设是某个抽象语法树节点类）。
+    # - 第二个参数 `'__repr__'` 是 Python 中的特殊方法名称，定义了对象在被调用 `repr()` 函数或出现在交互式环境中时的字符串表示形式。
+    # - 第三个参数 `cls_repr` 是一个函数或方法，它将被赋值为 `ast.Node` 类的 `__repr__` 方法。
+    # 总结：这段代码的作用是自定义 `ast.Node` 类的字符串表示形式，使用 `cls_repr` 方法来替代默认的 `__repr__` 行为。
     setattr(ast.Node, '__repr__', cls_repr)  # NOQA
 
 
@@ -1739,7 +1756,27 @@ def run(output_path, ast):
         # module. Doing this makes for a smaller code footprint because
         # I don't have to have all kinds of crazy instance checking to
         # see what I am dealing with.
+        # 我编写 pyi 构建器的方式实际上相当巧妙。它有一些烟雾和镜像的成分，但并不太糟糕。
+        # 我编写了一个类，它重写了 pyi_builder 模块的导入类。
+        # 我这样做是为了允许从 pycparser 加载我想要的节点。
+        # 我不使用的节点我不用特意定义，它会被扔到一个 CatchAll 类中，这个类什么都不做。
+        # 节点的字符串表示被猴子补丁修补，以扁平化输出。
+        # 我使用这个输出以动态方式使用 eval 和设置 globals 字典到我创建的模块类，这个类是 dict 的子类。
+        # 这允许我拉取请求的 c_ast 类，这些类是我编写的，位于 pyi_builder 模块中。
+        # 这样做可以减少代码的复杂性，因为我不需要进行各种疯狂的实例检查来确定我正在处理的内容。
+        
+        # 1. 使用 `eval` 函数动态执行字符串表达式 `f'Root{str(child)}'`，
+        #    将结果赋值给变量 `node`。
+        # 2. 调用 `node.gen_py()` 方法，执行生成 Python 代码的逻辑。
+        # 3. 通过 `eval` 和 `globals()` 的结合，实现了动态加载和执行代码的功能。
+        # 4. 这种方式允许根据输入的 AST 节点类型动态生成对应的 Python 代码，
+        #    而不需要预先定义所有可能的节点类型。
+        print(f'Root{str(child)}')
+        # 这段代码使用了 `eval` 函数来动态执行字符串形式的表达式。具体来说，它将字符串 `'Root'` 与变量 `child` 
+        # 转换为字符串后的结果拼接起来，并在指定的全局变量环境 `globs` 中进行求值。这通常用于根据变量 `child` 
+        # 的值动态生成并计算某个变量名或表达式的场景。需要注意的是，使用 `eval` 存在潜在的安全风险，尤其是在处理不可信输入时。
         node = eval(f'Root{str(child)}', globs)
+        print(f'node: {node}')
         node.gen_py()
 
     base_path = os.path.dirname(__file__)

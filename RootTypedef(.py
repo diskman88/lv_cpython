@@ -1,0 +1,32 @@
+RootTypedef(
+    name='lv_tick_get_cb_t', 
+    quals=[], 
+    storage=['typedef'], 
+    type=PtrDecl(
+        quals=[], 
+        type=FuncDecl(
+            args=ParamList(
+                params=[Typename(
+                            name=None, 
+                            quals=[], 
+                            align=None, 
+                            type=TypeDecl(
+                                declname=None, 
+                                quals=[], 
+                                align=None, 
+                                type=IdentifierType(
+                                    names=['void']
+                                )
+                            )
+                        )
+                        ]
+            ), 
+            type=TypeDecl(
+                declname='lv_tick_get_cb_t', 
+                quals=[], 
+                align=None, 
+                type=IdentifierType(names=['uint32_t'])
+            )
+        )
+    )
+)

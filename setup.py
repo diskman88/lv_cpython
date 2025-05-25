@@ -37,8 +37,8 @@ if not os.path.exists(build_temp):
 library_dirs = []
 include_dirs = ['.']
 linker_args = []
-libraries = ['SDL2']
-cpp_args = ['-DCPYTHON_SDL']
+libraries = []
+cpp_args = []
 
 
 if sys.platform.startswith('win'):
@@ -280,10 +280,10 @@ ffibuilder.set_source(
             iter_sources(lvgl_src_path) +
             iter_sources(os.path.join(lvgl_path, 'demos'))
     ),
-    define_macros=[('CPYTHON_SDL', 1)],
+    # define_macros=[('CPYTHON_SDL', 1)],
     library_dirs=library_dirs,
     libraries=libraries,
-    include_dirs=include_dirs + [project_path, lvgl_path],
+    include_dirs=include_dirs + [project_path, lvgl_path, lvgl_src_path],
     extra_compile_args=cpp_args,
     extra_link_args=linker_args,
     language='c'
